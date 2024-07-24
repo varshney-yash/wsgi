@@ -1,4 +1,3 @@
-import socket
 from io import StringIO
 
 def parse_http(http):
@@ -44,33 +43,9 @@ def application(environ, start_response):
         ('Content-Type', 'text/plain'),
         ('Content-Length', str(len(response)))
     ]
-    start_response_output = start_response('200 OK', response_headers)
-    return [start_response_output.encode('utf-8'), response.encode('utf-8')]
+    start_response('200 OK', response_headers)
+    return [response.encode('utf-8')]
 
 def view(environ):
     path = environ['PATH_INFO']
     return f'Hello from {path}'
-
-def run_server(host, port, application):
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        s.bind((host, port))
-        s.listen(1)
-        print(f"Serving on {host}:{port}...")
-
-        while True:
-            conn, addr = s.accept()
-            with conn:
-                try:
-                    http_request = conn.recv(1024).decode('utf-8')
-                    method, path, protocol, headers, body = parse_http(http_request)
-                    environ = to_environ(method, path, protocol, headers, body, addr)
-                    response = application(environ, start_response)
-                    for data in response:
-                        conn.sendall(data)
-                except Exception as e:
-                    print(f"Error: {e}")
-                    conn.sendall(b'HTTP/1.1 500 Internal Server Error\r\n\r\n')
-
-if __name__ == "__main__":
-    run_server('localhost', 8000, application)
